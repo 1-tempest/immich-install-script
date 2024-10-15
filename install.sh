@@ -15,11 +15,7 @@ create_immich_directory() {
 
 download_file() {
   local file="$1"
-  local renamed_file="$2"
-
-  if [[ -z "$renamed_file" ]]; then
-    renamed_file="$file"
-  fi
+  local renamed_file="${2:-$file}"
 
   echo "  Downloading $file..."
   if "${Curl[@]}" "$RepoUrl/$file" -o "./$renamed_file"; then
