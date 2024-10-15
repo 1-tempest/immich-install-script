@@ -439,9 +439,6 @@ main() {
     esac
     shift
   done
-  echo "hwa: $hwa"
-  echo "hwt: $hwt"
-  echo "enable_backups: $enable_backups"
 
   echo "Starting Immich installation..."
   local -r RepoUrl='https://github.com/immich-app/immich/releases/latest/download'
@@ -453,7 +450,9 @@ main() {
     return 14
   fi
 
-  create_immich_directory
+  if !create_immich_directory ; then
+    return 1
+  fi
   download_file "docker-compose.yml"
   download_file "example.env" ".env"
   generate_random_db_password
