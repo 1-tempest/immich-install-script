@@ -121,7 +121,7 @@ set_backups() {
 hw_is_wsl() {
   # Check if running in WSL by looking for WSL-specific files
   if grep -q "Microsoft" /proc/version || [ -f /proc/sys/kernel/osrelease ] && grep -q "WSL" /proc/sys/kernel/osrelease; then
-    echo "WSL detected."
+    echo "  WSL detected."
     return 0  # True (running in WSL)
   else
     return 1  # False (not running in WSL)
@@ -354,51 +354,52 @@ $current_group_settings"
 
   # Check the result of the replacement
   if [[ $? -eq 0 ]]; then
-    echo "File '$compose_file' updated successfully!"
+    echo "  File '$compose_file' updated successfully!"
   else
-    echo "Failed to update '$compose_file'."
+    echo "  Failed to update '$compose_file'."
   fi
 
 }
 
 set_hwa() {
-  local image_flag="$1"
-  if [[ -n "$image_flag" ]]; then
+  local flag="$1"
+  local image_flag=""
+  local hwa_file="hwaccel.ml.yml"
+  if [[ -z "$flag" ]]; then
     return 0
   fi
 
-  if [[ $image_flag == "auto" ]]; then
+  if [[ $flag == "auto" ]]; then
     if hwa_is_cuda; then
       image_flag="cuda"
     elif hwa_is_armnn; then
       image_flag="armnn"
     elif hwa_is_openvino; then
       image_flag="openvino"
+    else
+      echo "No hardware acceleration detected."
+      return 0
     fi
   fi
 
-  if [[ -n "$image_flag" ]]; then
-    local enable_hwa=$(prompt "Would you like to enable hardware acceleration?" "y n" "y")
-    if [[ "$enable_hwa" == "y" ]]; then
-      local hwa_file="hwaccel.ml.yml"
-      if download_file "$hwa_file"; then
-        merge_extends "docker-compose.yml" "$hwa_file" "immich-machine-learning" "$image_flag"
-        rm -f "$hwa_file"
-      else
-        echo "  Failed to download $hwa_file. Skipping hardware acceleration."
-      fi
-    fi
+  if download_file "$hwa_file"; then
+    merge_extends "docker-compose.yml" "$hwa_file" "immich-machine-learning" "$image_flag"
+    rm -f "$hwa_file"
+  else
+    echo "  Failed to download $hwa_file. Skipping hardware acceleration."
   fi
-
 }
 
 set_hwt() {
-  local image_flag="$1"
-  if [[ -n "$image_flag" ]]; then
+  local flag="$1"
+  local image_flag=""
+  local hwt_file="hwaccel.transcoding.yml"
+
+  if [[ -z "$flag" ]]; then
     return 0
   fi
 
-  if [[ $image_flag == "auto" ]]; then
+  if [[ $flag == "auto" ]]; then
     if hwt_is_nvec; then
       image_flag="nvec"
     elif hwt_is_quicksync; then
@@ -407,19 +408,16 @@ set_hwt() {
       image_flag="rkmpp"
     elif hwt_is_vaapi; then
       image_flag="vaapi"
+    else
+      echo "No hardware transcoding detected."
+      return 0 
     fi
   fi
 
-  if [[ -n "$image_flag" ]]; then
-    local enable_hwt=$(prompt "Would you like to enable hardware transcoding?" "y n" "y")
-    if [[ "$enable_hwt" == "y" ]]; then
-      local hwt_file="hwaccel.transcoding.yml"
-      if download_file "$hwt_file"; then
-        merge_extends "docker-compose.yml" "$hwt_file" "immich-machine-learning" "$image_flag"
-      else
-        echo "  Failed to download $hwt_file. Skipping hardware transcoding."
-      fi
-    fi
+  if download_file "$hwt_file"; then
+    merge_extends "docker-compose.yml" "$hwt_file" "immich-machine-learning" "$image_flag"
+  else
+    echo "  Failed to download $hwt_file. Skipping hardware transcoding."
   fi
 
 }
@@ -441,6 +439,9 @@ main() {
     esac
     shift
   done
+  echo "hwa: $hwa"
+  echo "hwt: $hwt"
+  echo "enable_backups: $enable_backups"
 
   echo "Starting Immich installation..."
   local -r RepoUrl='https://github.com/immich-app/immich/releases/latest/download'
